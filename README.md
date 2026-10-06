@@ -3,24 +3,22 @@
 
 <p align="center">
   <a href="https://www.linkedin.com/in/gianluca-zaccarelli-389807153/"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/></a>
+  <a href="https://www.instagram.com/gianlucazaccarelli/"><img src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" alt="Instagram"/></a>
   <a href="https://gianlucazaccarelli.github.io"><img src="https://img.shields.io/badge/Portfolio-222222?style=for-the-badge&logo=githubpages&logoColor=white" alt="Portfolio"/></a>
-  <a href="mailto:gianluca.zaccarelli98@gmail.com"><img src="https://img.shields.io/badge/Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Email"/></a>
+  <a href="mailto:gianluca.zaccarelli.work@gmail.com"><img src="https://img.shields.io/badge/Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Email"/></a>
 </p>
 
 ---
 
 ### About me
 
-- 💼 **9 years** building production software, end to end — from database schema to mobile app store release
-- 🏗️ I design and ship **marketplace platforms**: multi-role users, bookings, messaging, admin back-offices
+- 💼 **9 years** building production software, end to end
 - 📱 Cross-platform mobile with **Flutter**, backends in **Node.js** and **.NET**, data on **PostgreSQL**
 - ♻️ Obsessed with reusable architecture — I maintain my own full-stack boilerplate to go from idea to MVP fast
 - 🤝 Open to **freelance consulting** and collaborations
 
 ### What I'm working on
 
-- 🧵 A **B2B marketplace for the fashion production network** — connecting brands, workshops and suppliers (Flutter + Node.js + PostgreSQL)
-- 🌱 **Agri-tech marketplace** for the irrigation sector, including a legacy MSSQL → PostgreSQL migration toolchain
 - 🧰 A **universal full-stack boilerplate** (auth, roles, payments, notifications) extracted from real production code
 
 ### Tech stack
