@@ -17,25 +17,113 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug contributions (temporary)
-        env:
-          GH_TOKEN: ${{ secrets.STREAK_STATS_TOKEN }}
-        run: |
-          if [ -n "$GH_TOKEN" ]; then echo "secret: set"; else echo "secret: EMPTY"; fi
-          gh api user --jq '"token user: " + .login'
-          gh api -i user 2>/dev/null | grep -i '^x-oauth-scopes' || echo "scopes: n/a (fine-grained?)"
-          for y in 2022 2023 2024 2025 2026; do
-            gh api graphql -F login="${{ github.repository_owner }}" -F from="${y}-01-01T00:00:00Z" -F to="${y}-12-31T23:59:59Z" \
-              -f query='query($login:String!,$from:DateTime!,$to:DateTime!){user(login:$login){contributionsCollection(from:$from,to:$to){contributionCalendar{totalContributions} restrictedContributionsCount totalCommitContributions}}}' \
-              --jq ".data.user.contributionsCollection | \"$y: calendar=\(.contributionCalendar.totalContributions) restricted=\(.restrictedContributionsCount) commits=\(.totalCommitContributions)\"" || true
-          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Generate streak stats
-        uses: DenverCoder1/github-readme-streak-stats@v1
-        with:
-          options: user=${{ github.repository_owner }}&theme=default&hide_border=true&disable_animations=true
-          path: profile/streak.svg
-          token: ${{ secrets.STREAK_STATS_TOKEN || github.token }}
+        env:
+          GH_TOKEN: ${{ secrets.STREAK_STATS_TOKEN || github.token }}
+          LOGIN: ${{ github.repository_owner }}
+        run: |
+          mkdir -p profile
+          node <<'EOF'
+          const fs = require('fs');
+          const token = process.env.GH_TOKEN, login = process.env.LOGIN;
+
+          async function gql(query, variables) {
+            const r = await fetch('https://api.github.com/graphql', {
+              method: 'POST',
+              headers: { Authorization: 'bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'streak-stats' },
+              body: JSON.stringify({ query, variables })
+            });
+            const j = await r.json();
+            if (j.errors || !j.data) throw new Error(JSON.stringify(j.errors || j));
+            return j.data;
+          }
+
+          const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          function fmt(d, withYear) {
+            const p = d.split('-').map(Number);
+            return M[p[1] - 1] + ' ' + p[2] + (withYear ? ', ' + p[0] : '');
+          }
+
+          (async () => {
+            const now = new Date();
+            const today = now.toISOString().slice(0, 10);
+            const cy = today.slice(0, 4);
+            const created = (await gql('query($l:String!){user(login:$l){createdAt}}', { l: login })).user.createdAt;
+            const counts = {};
+            for (let y = new Date(created).getUTCFullYear(); y <= now.getUTCFullYear(); y++) {
+              const from = new Date(Date.UTC(y, 0, 1));
+              let to = new Date(Date.UTC(y, 11, 31, 23, 59, 59));
+              if (to > now) to = now;
+              const d = await gql('query($l:String!,$f:DateTime!,$t:DateTime!){user(login:$l){contributionsCollection(from:$f,to:$t){contributionCalendar{weeks{contributionDays{date contributionCount}}}}}}', { l: login, f: from.toISOString(), t: to.toISOString() });
+              for (const w of d.user.contributionsCollection.contributionCalendar.weeks)
+                for (const day of w.contributionDays) counts[day.date] = day.contributionCount;
+            }
+
+            const days = Object.keys(counts).filter(d => d <= today).sort();
+            let total = 0;
+            for (const d of days) total += counts[d];
+            const first = days.find(d => counts[d] > 0) || today;
+
+            let best = { len: 0 }, run = { len: 0 };
+            for (const d of days) {
+              if (counts[d] > 0) {
+                if (run.len === 0) run.start = d;
+                run.len++; run.end = d;
+                if (run.len > best.len) best = { len: run.len, start: run.start, end: run.end };
+              } else run = { len: 0 };
+            }
+
+            let i = days.length - 1;
+            if (i >= 0 && counts[days[i]] === 0) i--;
+            const cur = { len: 0 };
+            while (i >= 0 && counts[days[i]] > 0) {
+              if (!cur.end) cur.end = days[i];
+              cur.start = days[i]; cur.len++; i--;
+            }
+
+            function range(s) {
+              if (!s.len) return 'No streak';
+              const wy = s.start.slice(0, 4) !== cy || s.end.slice(0, 4) !== cy;
+              const a = fmt(s.start, wy), b = fmt(s.end, wy);
+              return a === b ? a : a + ' - ' + b;
+            }
+
+            const font = "'Segoe UI', Ubuntu, sans-serif";
+            const svg = [
+              '<svg xmlns="http://www.w3.org/2000/svg" width="495" height="195" viewBox="0 0 495 195">',
+              '<style>',
+              '.bg{fill:#fffefe}.num{fill:#151515;font:700 28px ' + font + '}.lbl{fill:#151515;font:400 14px ' + font + '}',
+              '.sub{fill:#464646;font:400 12px ' + font + '}.acc{fill:#fb8c00}.cur{fill:#fb8c00;font:700 14px ' + font + '}',
+              '.ring{fill:none;stroke:#fb8c00;stroke-width:5}.sep{stroke:#e4e2e2;stroke-width:1}',
+              '@media (prefers-color-scheme: dark){.bg{fill:#0d1117}.num,.lbl{fill:#e6edf3}.sub{fill:#8b949e}.sep{stroke:#30363d}}',
+              '</style>',
+              '<rect class="bg" width="495" height="195" rx="4.5"/>',
+              '<line class="sep" x1="165" y1="28" x2="165" y2="170"/>',
+              '<line class="sep" x1="330" y1="28" x2="330" y2="170"/>',
+              '<g text-anchor="middle">',
+              '<text class="num" x="82.5" y="88">' + total.toLocaleString('en-US') + '</text>',
+              '<text class="lbl" x="82.5" y="120">Total Contributions</text>',
+              '<text class="sub" x="82.5" y="145">' + fmt(first, true) + ' - Present</text>',
+              '<circle class="ring" cx="247.5" cy="71" r="40"/>',
+              '<circle class="bg" cx="247.5" cy="31" r="13"/>',
+              '<path class="acc" transform="translate(235.5 21)" d="M12 0c1.5 4.5 6 7 6 13a6 6 0 0 1-12 0c0-2.5 1-4.2 2.4-5.6.2 2 1.2 3.3 2.6 3.6C10 7.5 10.5 3.5 12 0z"/>',
+              '<text class="num" x="247.5" y="81">' + cur.len.toLocaleString('en-US') + '</text>',
+              '<text class="cur" x="247.5" y="140">Current Streak</text>',
+              '<text class="sub" x="247.5" y="165">' + range(cur) + '</text>',
+              '<text class="num" x="412.5" y="88">' + best.len.toLocaleString('en-US') + '</text>',
+              '<text class="lbl" x="412.5" y="120">Longest Streak</text>',
+              '<text class="sub" x="412.5" y="145">' + range(best) + '</text>',
+              '</g>',
+              '</svg>'
+            ].join('\n');
+            fs.writeFileSync('profile/streak.svg', svg + '\n');
+            console.log('total=' + total + ' current=' + cur.len + ' longest=' + best.len);
+          })().catch(e => { console.error(e); process.exit(1); });
+          EOF
 
       - name: Commit streak stats
         run: |
