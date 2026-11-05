@@ -17,6 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug contributions (temporary)
+        env:
+          GH_TOKEN: ${{ secrets.STREAK_STATS_TOKEN }}
+        run: |
+          if [ -n "$GH_TOKEN" ]; then echo "secret: set"; else echo "secret: EMPTY"; fi
+          gh api user --jq '"token user: " + .login'
+          gh api -i user 2>/dev/null | grep -i '^x-oauth-scopes' || echo "scopes: n/a (fine-grained?)"
+          for y in 2022 2023 2024 2025 2026; do
+            gh api graphql -F login="${{ github.repository_owner }}" -F from="${y}-01-01T00:00:00Z" -F to="${y}-12-31T23:59:59Z" \
+              -f query='query($login:String!,$from:DateTime!,$to:DateTime!){user(login:$login){contributionsCollection(from:$from,to:$to){contributionCalendar{totalContributions} restrictedContributionsCount totalCommitContributions}}}' \
+              --jq ".data.user.contributionsCollection | \"$y: calendar=\(.contributionCalendar.totalContributions) restricted=\(.restrictedContributionsCount) commits=\(.totalCommitContributions)\"" || true
+          done
+
       - name: Generate streak stats
         uses: DenverCoder1/github-readme-streak-stats@v1
         with:
