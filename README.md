@@ -54,10 +54,7 @@
 ### Activity
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://streak-stats.demolab.com?user=GianlucaZaccarelli&theme=github-dark-blue&hide_border=true&disable_animations=true"/>
-    <img src="https://streak-stats.demolab.com?user=GianlucaZaccarelli&theme=default&hide_border=true&disable_animations=true" alt="GitHub streak"/>
-  </picture>
+  <a href="https://github.com/GianlucaZaccarelli/GianlucaZaccarelli/actions/workflows/streak-stats.yml"><img src="./profile/streak.svg" alt="GitHub streak"/></a>
 </p>
 
 <sub>Most of my work lives in private client repositories — the contribution graph tells the real story.</sub>
