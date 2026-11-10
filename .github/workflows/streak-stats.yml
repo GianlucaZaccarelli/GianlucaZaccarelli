@@ -131,5 +131,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add profile/streak.svg
           git diff --cached --quiet && exit 0
-          git commit -m "Update streak stats" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+          git commit -m "Update streak stats"
           git push
